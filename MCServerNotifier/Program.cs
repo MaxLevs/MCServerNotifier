@@ -9,6 +9,8 @@ namespace MCServerNotifier
         static void Main(string[] args)
         {
             var test = new McQuery(IPAddress.Loopback, 25565);
+            var bstat = test.GetFullStat();
+            return;
         }
     }
 }
