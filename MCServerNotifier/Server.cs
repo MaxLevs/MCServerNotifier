@@ -1,6 +1,6 @@
 namespace MCServerNotifier
 {
-    public class McServer
+    public class Server
     {
         
     }
