@@ -7,7 +7,7 @@ namespace MCServerNotifier
     {
         private readonly byte[] _sessionId;
 
-        private SessionId (byte[] sessionId)
+        public SessionId (byte[] sessionId)
         {
             _sessionId = sessionId;
         }

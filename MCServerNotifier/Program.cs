@@ -10,15 +10,9 @@ namespace MCServerNotifier
     {
         static void Main(string[] args)
         {
-            byte[] fakeChallengeToken = { 0xFF, 0xFF, 0xFF, 0xFF };
-            Request handshake = Request.GetHandshakeRequest();
-            Request basicStatus = Request.GetBasicStatusRequest(fakeChallengeToken);
-            Request fullStatus = Request.GetFullStatusRequest(fakeChallengeToken);
-            
-            const int padding = 23;
-            Console.WriteLine("Handshake request: ".PadRight(padding) + BitConverter.ToString(handshake.Data));
-            Console.WriteLine("Basic Status request: ".PadRight(padding) + BitConverter.ToString(basicStatus.Data));
-            Console.WriteLine("Full Status request: ".PadRight(padding) + BitConverter.ToString(fullStatus.Data));
+            var service = new Service();
+            var server = new Server("ML_VDS", "140.82.11.11", 25565);
+            server.Watch(service);
         }
     }
 }
