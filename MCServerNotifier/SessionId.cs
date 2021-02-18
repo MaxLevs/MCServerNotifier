@@ -1,4 +1,5 @@
 using System;
+using System.Linq;
 
 namespace MCServerNotifier
 {
@@ -15,6 +16,7 @@ namespace MCServerNotifier
         {
             var sessionId = new byte[4];
             new Random().NextBytes(sessionId);
+            sessionId = sessionId.Select(@byte => (byte)(@byte & 0x0F)).ToArray();
             return new SessionId(sessionId);
         }
 
