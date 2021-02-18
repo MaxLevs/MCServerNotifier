@@ -10,44 +10,15 @@ namespace MCServerNotifier
     {
         static void Main(string[] args)
         {
-            var mcQuery = new McQuery(IPAddress.Loopback, 25565);
-            var delayTime = 1000;
-            bool? isOnline = null;
-            string[] playerBuff = null;
+            byte[] fakeChallengeToken = { 0xFF, 0xFF, 0xFF, 0xFF };
+            Request handshake = Request.GetHandshakeRequest();
+            Request basicStatus = Request.GetBasicStatusRequest(fakeChallengeToken);
+            Request fullStatus = Request.GetFullStatusRequest(fakeChallengeToken);
             
-            while (true)
-            {
-                var fullStat = mcQuery.GetFullStat();
-                
-                if (playerBuff != null)
-                {
-                    foreach (var player in fullStat.Players)
-                    {
-                        if (!playerBuff.Contains(player))
-                        {
-                            Console.WriteLine($"[{player}] has joined the game");
-                        }
-                    }
-                    
-                    foreach (var player in playerBuff)
-                    {
-                        if (!fullStat.Players.Contains(player))
-                        {
-                            Console.WriteLine($"[{player}] has left the game");
-                        }
-                    }
-                }
-
-                if (isOnline != null && isOnline != mcQuery.Online)
-                {
-                    Console.WriteLine($"Server is online? [{mcQuery.Online}]");
-                }
-                isOnline = mcQuery.Online;
-
-                playerBuff = fullStat.Players;
-                
-                Thread.Sleep(delayTime);
-            }
+            const int padding = 23;
+            Console.WriteLine("Handshake request: ".PadRight(padding) + BitConverter.ToString(handshake.Data));
+            Console.WriteLine("Basic Status request: ".PadRight(padding) + BitConverter.ToString(basicStatus.Data));
+            Console.WriteLine("Full Status request: ".PadRight(padding) + BitConverter.ToString(fullStatus.Data));
         }
     }
 }
