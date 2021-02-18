@@ -10,6 +10,7 @@ namespace MCServerNotifier
         {
             var test = new McQuery(IPAddress.Loopback, 25565);
             var bstat = test.GetFullStat();
+            Console.WriteLine("["+string.Join(' ', bstat.Players)+"]");
             return;
         }
     }
