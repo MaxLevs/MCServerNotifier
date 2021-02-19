@@ -71,7 +71,9 @@ namespace MCServerNotifier
             UpdateChallengeTokenTimer = new Timer(async obj =>
             {
                 if (!IsOnline) return;
-                Console.WriteLine($"[INFO] [{ServerName}] Send handshake request");
+                
+                if(Debug)
+                    Console.WriteLine($"[INFO] [{ServerName}] Send handshake request");
 
                 try
                 {
@@ -83,15 +85,17 @@ namespace MCServerNotifier
                         RetryCounter = 0;
                     }
                     
-                    Console.WriteLine($"[INFO] [{ServerName}] ChallengeToken is set up: " + BitConverter.ToString(challengeToken));
+                    if(Debug)
+                        Console.WriteLine($"[INFO] [{ServerName}] ChallengeToken is set up: " + BitConverter.ToString(challengeToken));
                 }
                 
                 catch (Exception ex)
                 {
                     if (ex is SocketException || ex is McQueryServerIsOffline || ex is ChallengeTokenIsNullException)
                     {
-                        Console.WriteLine(
-                            $"[WARNING] [{ServerName}] [UpdateChallengeTokenTimer] Server doesn't response. Try to reconnect: {RetryCounter}");
+                        if(Debug)
+                            Console.WriteLine($"[WARNING] [{ServerName}] [UpdateChallengeTokenTimer] Server doesn't response. Try to reconnect: {RetryCounter}");
+                        
                         lock (_retryCounterLock)
                         {
                             RetryCounter++;
@@ -115,7 +119,8 @@ namespace MCServerNotifier
             {
                 if (!IsOnline) return;
                 
-                Console.WriteLine($"[INFO] [{ServerName}] Send full status request");
+                if(Debug)
+                    Console.WriteLine($"[INFO] [{ServerName}] Send full status request");
 
                 try
                 {
@@ -127,7 +132,9 @@ namespace MCServerNotifier
                         RetryCounter = 0;
                     }
                     
-                    Console.WriteLine($"[INFO] [{ServerName}] Full status is received");
+                    if(Debug)
+                        Console.WriteLine($"[INFO] [{ServerName}] Full status is received");
+                    
                     OnFullStatusUpdated?.Invoke(this, new ServerStateEventArgs(ServerName, response));
                 }
                 
@@ -135,7 +142,9 @@ namespace MCServerNotifier
                 {
                     if (ex is SocketException || ex is McQueryServerIsOffline || ex is ChallengeTokenIsNullException)
                     {
-                        Console.WriteLine($"[WARNING] [{ServerName}] [UpdateServerStatusTimer] Server doesn't response. Try to reconnect: {RetryCounter}");
+                        if(Debug)
+                            Console.WriteLine($"[WARNING] [{ServerName}] [UpdateServerStatusTimer] Server doesn't response. Try to reconnect: {RetryCounter}");
+                        
                         lock (_retryCounterLock)
                         {
                             RetryCounter++;
@@ -164,7 +173,8 @@ namespace MCServerNotifier
 
         public async void WaitForServerAlive()
         {
-            Console.WriteLine($"[WARNING] [{ServerName}] Server is unavailable. Waiting for reconnection...");
+            if(Debug)
+                Console.WriteLine($"[WARNING] [{ServerName}] Server is unavailable. Waiting for reconnection...");
             
             IsOnline = false;
             await Unwatch();
@@ -189,13 +199,17 @@ namespace MCServerNotifier
                 }
                 catch (SocketException)
                 {
-                    Console.WriteLine($"[WARNING] [{ServerName}] [WaitForServerAlive] Server doesn't response. Try to reconnect: {RetryCounter}");
+                    if(Debug)
+                        Console.WriteLine($"[WARNING] [{ServerName}] [WaitForServerAlive] Server doesn't response. Try to reconnect: {RetryCounter}");
+                    
                     lock (_retryCounterLock)
                     {
                         RetryCounter++;
                         if (RetryCounter >= RetryMaxCount)
                         {
-                            Console.WriteLine($"[WARNING] [{ServerName}] [WaitForServerAlive] Recreate socket");
+                            if(Debug)
+                                Console.WriteLine($"[WARNING] [{ServerName}] [WaitForServerAlive] Recreate socket");
+                            
                             RetryCounter = 0;
                             _mcQuery.InitSocket();
                         }
@@ -208,6 +222,8 @@ namespace MCServerNotifier
         public event EventHandler OnFullStatusUpdated;
         public event EventHandler OnServerOffline;
         public event EventHandler OnServerOnline;
+        
+        public bool Debug { get; set; }
     }
 
     public class ServerStateEventArgs : EventArgs
