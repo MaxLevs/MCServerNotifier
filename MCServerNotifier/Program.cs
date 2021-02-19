@@ -1,5 +1,7 @@
 ﻿using System;
+using System.Linq;
 using MCQueryLib.State;
+using TerminalNotifierLib;
 
 namespace MCServerNotifier
 {
@@ -17,14 +19,27 @@ namespace MCServerNotifier
             if (server.QueryPort.HasValue)
             {
                 var statusWatcher = new StatusWatcher(server.Name, server.Host, server.QueryPort.Value);
+                var notifierOptionsLocker = new object();
+                var notifierOptions = new TerminalNotifierOptions
+                {
+                    Title = $"[{server.Name}] MC Server notification",
+                    ContentImage = "Resources/notification_icon.png",
+                };
 
                 statusWatcher.OnServerOnline += (sender, eventArgs) =>
                 {
                     if (sender == null)
                         return;
 
-                    var statusWatcher = (StatusWatcher) sender;
-                    Console.WriteLine($"[{DateTime.Now}] [{statusWatcher.ServerName}] Server is online");
+                    var watcher = (StatusWatcher) sender;
+
+                    lock (notifierOptionsLocker)
+                    {
+                        notifierOptions.Message = "Server is [ONLINE]";
+                        notifierOptions.Sound = NotificationSound.Ping;
+                        TerminalNotifierWrapper.Notify(notifierOptions);
+                    }
+                    Console.WriteLine($"[{DateTime.Now}] [{watcher.ServerName}] Server is online");
                 };
                 
                 statusWatcher.OnServerOffline += (sender, eventArgs) =>
@@ -32,15 +47,47 @@ namespace MCServerNotifier
                     if (sender == null)
                         return;
 
-                    var statusWatcher = (StatusWatcher) sender;
-                    Console.WriteLine($"[{DateTime.Now}] [{statusWatcher.ServerName}] Server is offline");
+                    var watcher = (StatusWatcher) sender;
+                    
+                    lock (notifierOptionsLocker)
+                    {
+                        notifierOptions.Message = "Server is [OFFLINE]";
+                        notifierOptions.Sound = NotificationSound.Basso;
+                        TerminalNotifierWrapper.Notify(notifierOptions);
+                    }
+                    Console.WriteLine($"[{DateTime.Now}] [{watcher.ServerName}] Server is offline");
                 };
-                
+
+                string[] storedPlayerList = null;
                 statusWatcher.OnFullStatusUpdated += (sender, eventArgs) =>
                 {
                     var serverStateEventArgs = (ServerStateEventArgs) eventArgs;
                     var serverFullState = (ServerFullState) serverStateEventArgs.ServerState;
                     Console.WriteLine($"[{DateTime.Now}] [{serverStateEventArgs.ServerName}] State has updated: ({serverFullState.PlayerCount} out of {serverFullState.MaxPlayers}) [{string.Join(", ", serverFullState.PlayerList)}]");
+
+                    if (storedPlayerList != null)
+                    {
+                        lock (notifierOptionsLocker)
+                        {
+                            foreach (var playerName in serverFullState.PlayerList)
+                            {
+                                if (storedPlayerList.Contains(playerName)) continue;
+                                notifierOptions.Message = $"[{playerName}] has JOINED the game";
+                                notifierOptions.Sound = NotificationSound.Submarine;
+                                TerminalNotifierWrapper.Notify(notifierOptions);
+                            }
+
+                            foreach (var playerName in storedPlayerList)
+                            {
+                                if (serverFullState.PlayerList.Contains(playerName)) continue;
+                                notifierOptions.Message = $"[{playerName}] has LEFT the game";
+                                notifierOptions.Sound = NotificationSound.Submarine;
+                                TerminalNotifierWrapper.Notify(notifierOptions);
+                            }
+                        }
+                    }
+
+                    storedPlayerList = serverFullState.PlayerList;
                 };
                 
                 statusWatcher.Watch();
