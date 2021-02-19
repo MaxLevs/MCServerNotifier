@@ -43,16 +43,28 @@ namespace MCServerNotifier
         private Timer UpdateChallengeTokenTimer { get; set; }
         private Timer UpdateServerStatusTimer { get; set; }
         
-        public event EventHandler OnFullStatusUpdated;
-        public event EventHandler OnServerOffline;
-        public event EventHandler OnServerOnline;
-        
         public StatusWatcher(string serverName, string host, int queryPort)
         {
             ServerName = serverName;
             _mcQuery = new McQuery(Dns.GetHostAddresses(host)[0], queryPort);
             _mcQuery.InitSocket();
         }
+
+        #region Retry Parameters
+        
+        private object _retryCounterLock = new();
+        private int RetryCounter = 0;
+        public static int RetryMaxCount = 5;
+        //todo: change to Static realisation which changes this parameter into all instances of McQuery
+        public int ResponseWaitIntervalSecond
+        {
+            get => _mcQuery.ResponseWaitIntervalSecond;
+            set => _mcQuery.ResponseWaitIntervalSecond = value;
+        }
+        public static int GettingChallengeTokenInterval = 30000;
+        public static int GettingStatusInterval = 5000;
+        
+        #endregion
         
         public async void Watch()
         {
@@ -60,12 +72,10 @@ namespace MCServerNotifier
             {
                 if (!IsOnline) return;
                 Console.WriteLine($"[INFO] [{ServerName}] Send handshake request");
-                    
-                byte[] challengeToken = null;
-                
+
                 try
                 {
-                    challengeToken = await _mcQuery.GetHandshake();
+                    var challengeToken = await _mcQuery.GetHandshake();
                     
                     IsOnline = true;
                     lock (_retryCounterLock)
@@ -76,17 +86,26 @@ namespace MCServerNotifier
                     Console.WriteLine($"[INFO] [{ServerName}] ChallengeToken is set up: " + BitConverter.ToString(challengeToken));
                 }
                 
-                catch (SocketException)
+                catch (Exception ex)
                 {
-                    Console.WriteLine($"[WARNING] [{ServerName}] [UpdateChallengeTokenTimer] Server doesn't response. Try to reconnect: {RetryCounter}");
-                    lock (_retryCounterLock)
+                    if (ex is SocketException || ex is McQueryServerIsOffline || ex is ChallengeTokenIsNullException)
                     {
-                        RetryCounter++;
-                        if (RetryCounter >= RetryMaxCount)
+                        Console.WriteLine(
+                            $"[WARNING] [{ServerName}] [UpdateChallengeTokenTimer] Server doesn't response. Try to reconnect: {RetryCounter}");
+                        lock (_retryCounterLock)
                         {
-                            RetryCounter = 0;
-                            WaitForServerAlive();
+                            RetryCounter++;
+                            if (RetryCounter >= RetryMaxCount)
+                            {
+                                RetryCounter = 0;
+                                WaitForServerAlive();
+                            }
                         }
+                    }
+
+                    else
+                    {
+                        throw;
                     }
                 }
                 
@@ -98,11 +117,9 @@ namespace MCServerNotifier
                 
                 Console.WriteLine($"[INFO] [{ServerName}] Send full status request");
 
-                ServerFullState response = null;
-                
                 try
                 {
-                    response = await _mcQuery.GetFullStatus();
+                    var response = await _mcQuery.GetFullStatus();
                     
                     IsOnline = true;
                     lock (_retryCounterLock)
@@ -114,17 +131,25 @@ namespace MCServerNotifier
                     OnFullStatusUpdated?.Invoke(this, new ServerStateEventArgs(ServerName, response));
                 }
                 
-                catch (SocketException)
+                catch (Exception ex)
                 {
-                    Console.WriteLine($"[WARNING] [{ServerName}] [UpdateServerStatusTimer] Server doesn't response. Try to reconnect: {RetryCounter}");
-                    lock (_retryCounterLock)
+                    if (ex is SocketException || ex is McQueryServerIsOffline || ex is ChallengeTokenIsNullException)
                     {
-                        RetryCounter++;
-                        if (RetryCounter >= RetryMaxCount)
+                        Console.WriteLine($"[WARNING] [{ServerName}] [UpdateServerStatusTimer] Server doesn't response. Try to reconnect: {RetryCounter}");
+                        lock (_retryCounterLock)
                         {
-                            RetryCounter = 0;
-                            WaitForServerAlive();
+                            RetryCounter++;
+                            if (RetryCounter >= RetryMaxCount)
+                            {
+                                RetryCounter = 0;
+                                WaitForServerAlive();
+                            }
                         }
+                    }
+                    
+                    else
+                    {
+                        throw;
                     }
                 }
                 
@@ -179,17 +204,10 @@ namespace MCServerNotifier
             }, null, 500, 5000);
         }
 
-        private object _retryCounterLock = new();
-        private int RetryCounter = 0;
-        public static int RetryMaxCount = 5;
-
-        public int ResponseWaitIntervalSecond
-        {
-            get => _mcQuery.ResponseWaitIntervalSecond;
-            set => _mcQuery.ResponseWaitIntervalSecond = value;
-        }
-        public static int GettingChallengeTokenInterval = 30000;
-        public static int GettingStatusInterval = 5000;
+        
+        public event EventHandler OnFullStatusUpdated;
+        public event EventHandler OnServerOffline;
+        public event EventHandler OnServerOnline;
     }
 
     public class ServerStateEventArgs : EventArgs
