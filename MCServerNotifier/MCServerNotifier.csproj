@@ -7,6 +7,10 @@
 
     <ItemGroup>
       <ProjectReference Include="..\MCQueryLib\MCQueryLib.csproj" />
+      <ProjectReference Include="..\TerminalNotifierLib\TerminalNotifierLib.csproj" />
+    </ItemGroup>
+    <ItemGroup>
+        <None Update="Resources/notification_icon.png" CopyToOutputDirectory="PreserveNewest" />
     </ItemGroup>
 
 </Project>
