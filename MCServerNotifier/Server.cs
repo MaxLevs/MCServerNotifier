@@ -89,6 +89,8 @@ namespace MCServerNotifier
                     WaitForServerAlive(QueryPort.Value);
                 }
                     
+                if (response == null) return;
+                
                 var challengeTokenRaw = Response.ParseHandshake(response);
                 lock (_challengeTokenLock)
                 {
@@ -121,6 +123,8 @@ namespace MCServerNotifier
                 {
                     WaitForServerAlive(QueryPort.Value);
                 }
+                
+                if (response == null) return;
 
                 ServerFullState fullState = Response.ParseFullState(response);
                     
@@ -141,17 +145,18 @@ namespace MCServerNotifier
 
         public async void WaitForServerAlive(int port)
         {
+            Console.WriteLine($"[WARNING] [{Name}] Server is unavailable. Waiting for reconnection...");
             IsOnline = false;
             await Unwatch();
-            var ipEndPoint = IPEndPoint.Parse($"{Host}:{port}");
             Timer waitTimer = null;
             waitTimer = new Timer(async obj => {
                 try
                 {
                     using TcpClient tcpClient = new TcpClient();
-                    tcpClient.Connect(ipEndPoint);
+                    await tcpClient.ConnectAsync(Host, port);
                     if (waitTimer == null) return;
                     await waitTimer.DisposeAsync();
+                    Console.WriteLine($"[INFO] [{Name}] Server is available again");
                     Watch();
                 }  catch (SocketException) { }
             }, null, 500, 5000);

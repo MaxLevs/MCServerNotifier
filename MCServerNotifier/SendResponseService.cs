@@ -1,11 +1,7 @@
 using System;
-using System.Collections.Concurrent;
 using System.Net;
 using System.Net.Sockets;
-using System.Threading;
 using System.Threading.Tasks;
-using MCServerNotifier.Data;
-using MCServerNotifier.Packages;
 
 namespace MCServerNotifier
 {
@@ -13,6 +9,11 @@ namespace MCServerNotifier
     {
         public static async Task<byte[]> SendReceive(UdpClient client, byte[] data, int receiveAwaitIntervalSeconds)
         {
+            if (client == null)
+            {
+                throw new NullReferenceException("UdpClient client is null");
+            }
+            
             IPEndPoint ipEndPoint = null;
             byte[] response = null;
             

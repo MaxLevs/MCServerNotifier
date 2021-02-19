@@ -90,6 +90,8 @@ namespace MCServerNotifier.Packages
 			string[] informations = stringData.Split(new[] {"player_\0\0"}, StringSplitOptions.None);
 
 			string[] serverInfoArr = informations[0].Split(new[] { "\0" }, StringSplitOptions.None);
+			
+			// todo: something goes wrong here, may be player field is undefined
 			string[] playerList = informations[1].Split(new[] { "\0" }, StringSplitOptions.None)
 				.Where(s => !string.IsNullOrEmpty(s)).ToArray();
 
