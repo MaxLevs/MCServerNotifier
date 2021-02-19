@@ -183,7 +183,6 @@ namespace MCServerNotifier
             
             Timer waitTimer = null;
             waitTimer = new Timer(async obj => {
-                byte[] response = null;
                 try
                 {
                     await _mcQuery.GetHandshake();
