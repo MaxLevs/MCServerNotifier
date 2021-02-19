@@ -7,7 +7,6 @@ namespace MCServerNotifier
     {
         static void Main(string[] args)
         {
-            var service = new SendResponseService();
             var server = new Server("ML_VDS", "140.82.11.11", 25565);
             
             server.OnFullStatusUpdated += (sender, eventArgs) =>
@@ -17,9 +16,12 @@ namespace MCServerNotifier
                 Console.WriteLine($"[{serverStateEventArgs.ServerName}] State has updated: {string.Join(", ", serverFullState.PlayerList)}");
             };
             
-            server.Watch(service);
+            server.Watch();
 
-            service.Wait();
+            while (true)
+            {
+                // ignore
+            }
         }
     }
 }
