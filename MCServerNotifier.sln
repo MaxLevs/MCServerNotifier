@@ -4,6 +4,8 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "MCServerNotifier", "MCServe
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "MCQueryLib", "MCQueryLib\MCQueryLib.csproj", "{72C2A849-0AFD-480E-B727-EFE41EE588A0}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "UdpExtension", "UdpExtension\UdpExtension.csproj", "{45529564-2265-441E-B57F-E4E5E5E2CA6E}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -18,5 +20,9 @@ Global
 		{72C2A849-0AFD-480E-B727-EFE41EE588A0}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{72C2A849-0AFD-480E-B727-EFE41EE588A0}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{72C2A849-0AFD-480E-B727-EFE41EE588A0}.Release|Any CPU.Build.0 = Release|Any CPU
+		{45529564-2265-441E-B57F-E4E5E5E2CA6E}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{45529564-2265-441E-B57F-E4E5E5E2CA6E}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{45529564-2265-441E-B57F-E4E5E5E2CA6E}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{45529564-2265-441E-B57F-E4E5E5E2CA6E}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 EndGlobal

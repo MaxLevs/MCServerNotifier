@@ -1,7 +1,7 @@
 using System.Collections.Generic;
-using MCServerNotifier.Data;
+using MCQueryLib.Data;
 
-namespace MCServerNotifier.Packages
+namespace MCQueryLib.Packages
 {
     /// <summary>
     /// This class builds Minecraft Query Packages for requests

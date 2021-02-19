@@ -1,8 +1,12 @@
 using System;
 using System.Linq;
 
-namespace MCServerNotifier.Data
+namespace MCQueryLib.Data
 {
+    /// <summary>
+    /// This class represents SessionId filed into packages.
+    /// It provides api for create random SessionId or parse it from byte[]
+    /// </summary>
     public class SessionId
     {
         private readonly byte[] _sessionId;

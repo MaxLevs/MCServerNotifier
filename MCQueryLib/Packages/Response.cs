@@ -2,10 +2,10 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
-using MCServerNotifier.Data;
-using MCServerNotifier.State;
+using MCQueryLib.Data;
+using MCQueryLib.State;
 
-namespace MCServerNotifier.Packages
+namespace MCQueryLib.Packages
 {
     /// <summary>
     /// This class parses Minecraft Query response packages for getting data from it

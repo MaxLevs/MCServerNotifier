@@ -3,8 +3,9 @@ using System.Net;
 using System.Net.Sockets;
 using System.Threading;
 using System.Threading.Tasks;
-using MCServerNotifier.Packages;
-using MCServerNotifier.State;
+using MCQueryLib.Packages;
+using MCQueryLib.State;
+using UdpExtension;
 
 namespace MCServerNotifier
 {

@@ -3,7 +3,7 @@ using System.Net;
 using System.Net.Sockets;
 using System.Threading.Tasks;
 
-namespace MCServerNotifier
+namespace UdpExtension
 {
     public static class SendResponseService
     {

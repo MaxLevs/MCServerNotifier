@@ -1,4 +1,4 @@
-namespace MCServerNotifier.State
+namespace MCQueryLib.State
 {
     public abstract class ServerState
     {

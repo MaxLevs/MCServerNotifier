@@ -1,7 +1,8 @@
 ﻿using System;
 using System.Net;
 using System.Net.Sockets;
-using MCServerNotifier.State;
+using MCQueryLib;
+using MCQueryLib.State;
 
 namespace MCServerNotifier
 {

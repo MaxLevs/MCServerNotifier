@@ -1,5 +1,8 @@
-namespace MCServerNotifier.State
+namespace MCQueryLib.State
 {
+    /// <summary>
+    /// Represents data which is received from BasicState request
+    /// </summary>
     public class ServerBasicState : ServerState
     {
         public string Motd { get; set; }
