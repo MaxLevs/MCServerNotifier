@@ -34,7 +34,7 @@ namespace MCServerNotifier
             {
                 var serverStateEventArgs = (ServerStateEventArgs) eventArgs;
                 var serverFullState = (ServerFullState) serverStateEventArgs.ServerState;
-                Console.WriteLine($"[{serverStateEventArgs.ServerName}] State has updated: {string.Join(", ", serverFullState.PlayerList)}");
+                Console.WriteLine($"[{serverStateEventArgs.ServerName}] State has updated: ({serverFullState.PlayerCount} out of {serverFullState.MaxPlayers}) [{string.Join(", ", serverFullState.PlayerList)}]");
             };
             
             server.Watch();

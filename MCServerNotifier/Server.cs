@@ -36,12 +36,12 @@ namespace MCServerNotifier
                 }
             }
         }
-        private bool _isOnline = false;
+        private bool _isOnline = true;
 
         private object _challengeTokenLock = new();
         private byte[] _challengeToken = new byte[4];
 
-        private UdpClient statusWatcherClient;
+        private UdpClient _statusWatcherClient;
         
         private void SetChallengeToken(byte[] challengeToken)
         {
@@ -71,43 +71,36 @@ namespace MCServerNotifier
         public async void Watch()
         {
             if (QueryPort == null) return;
-            statusWatcherClient = new UdpClient(Host.ToString(), QueryPort.Value);
-            object _retryCounterLock = new();
-            int retryCounter = 0;
+            _statusWatcherClient = new UdpClient(Host.ToString(), QueryPort.Value);
             
             UpdateChallengeTokenTimer = new Timer(async obj =>
             {
+                if (!IsOnline) return;
                 Console.WriteLine($"[INFO] [{Name}] Send handshake request");
                     
                 Request handshakeRequest = Request.GetHandshakeRequest();
                 byte[] response = null;
                 try
                 {
-                    response = await SendResponseService.SendReceive(statusWatcherClient, handshakeRequest.Data, ReceiveAwaitIntervalSeconds);
+                    response = await SendResponseService.SendReceive(_statusWatcherClient, handshakeRequest.Data, ReceiveAwaitIntervalSeconds);
                     IsOnline = true;
+                    lock (_retryCounterLock)
+                    {
+                        RetryCounter = 0;
+                    }
                 }
                 catch (SocketException)
                 {
-                    Console.WriteLine($"[WARNING] [{Name}] [UpdateChallengeTokenTimer] Server doesn't response. Try to reconnect: {retryCounter}");
+                    Console.WriteLine($"[WARNING] [{Name}] [UpdateChallengeTokenTimer] Server doesn't response. Try to reconnect: {RetryCounter}");
                     lock (_retryCounterLock)
                     {
-                        retryCounter++;
-                        if (retryCounter >= RetryMaxCount)
+                        RetryCounter++;
+                        if (RetryCounter >= RetryMaxCount)
                         {
-                            retryCounter = 0;
-
-                            IsOnline = false;
-                            Task.Run(new Action(async () =>
-                            {
-                                await Unwatch();
-                                statusWatcherClient.Dispose();
-                                statusWatcherClient = new UdpClient(Host.ToString(), QueryPort.Value);
-                                Watch();
-                                Console.WriteLine($"[INFO] [{Name}] [UpdateChallengeTokenTimer] Server is alive");
-                            }));
+                            RetryCounter = 0;
+                            WaitForServerAlive();
                         }
                     }
-                    // WaitForServerAlive(QueryPort.Value);
                 }
                     
                 if (response == null) return;
@@ -138,33 +131,26 @@ namespace MCServerNotifier
                 byte[] response = null;
                 try
                 {
-                    response = await SendResponseService.SendReceive(statusWatcherClient, fullStatusRequest.Data, ReceiveAwaitIntervalSeconds);
+                    response = await SendResponseService.SendReceive(_statusWatcherClient, fullStatusRequest.Data, ReceiveAwaitIntervalSeconds);
                     IsOnline = true;
+                    lock (_retryCounterLock)
+                    {
+                        RetryCounter = 0;
+                    }
                 }
                 
                 catch (SocketException)
                 {
-                    Console.WriteLine($"[WARNING] [{Name}] [UpdateServerStatusTimer] Server doesn't response. Try to reconnect: {retryCounter}");
+                    Console.WriteLine($"[WARNING] [{Name}] [UpdateServerStatusTimer] Server doesn't response. Try to reconnect: {RetryCounter}");
                     lock (_retryCounterLock)
                     {
-                        retryCounter++;
-                        if (retryCounter >= RetryMaxCount)
+                        RetryCounter++;
+                        if (RetryCounter >= RetryMaxCount)
                         {
-                            retryCounter = 0;
-
-                            IsOnline = false;
-                            Task.Run(new Action(async () =>
-                            {
-                                await Unwatch();
-                                statusWatcherClient.Dispose();
-                                statusWatcherClient = new UdpClient(Host.ToString(), QueryPort.Value);
-                                Watch();
-                                Console.WriteLine($"[INFO] [{Name}] [UpdateServerStatusTimer] Server is alive");
-                            }));
+                            RetryCounter = 0;
+                            WaitForServerAlive();
                         }
-
                     }
-                    // WaitForServerAlive(QueryPort.Value);
                 }
                 
                 if (response == null) return;
@@ -182,29 +168,51 @@ namespace MCServerNotifier
         {
             await UpdateChallengeTokenTimer.DisposeAsync();
             await UpdateServerStatusTimer.DisposeAsync();
-            statusWatcherClient.Dispose();
-            statusWatcherClient = null;
+            _statusWatcherClient?.Dispose();
+            _statusWatcherClient = null;
         }
 
-        public async void WaitForServerAlive(int port)
+        public async void WaitForServerAlive()
         {
             Console.WriteLine($"[WARNING] [{Name}] Server is unavailable. Waiting for reconnection...");
             IsOnline = false;
             await Unwatch();
+            _statusWatcherClient = new UdpClient(Host.ToString(), QueryPort.Value);
             Timer waitTimer = null;
             waitTimer = new Timer(async obj => {
+                Request handshakeRequest = Request.GetHandshakeRequest();
+                byte[] response = null;
                 try
                 {
-                    using TcpClient tcpClient = new TcpClient();
-                    await tcpClient.ConnectAsync(Host, port);
-                    if (waitTimer == null) return;
-                    await waitTimer.DisposeAsync();
-                    Console.WriteLine($"[INFO] [{Name}] Server is available again");
+                    response = await SendResponseService.SendReceive(_statusWatcherClient, handshakeRequest.Data, ReceiveAwaitIntervalSeconds);
+                    IsOnline = true;
                     Watch();
-                }  catch (SocketException) { }
+                    lock (_retryCounterLock)
+                    {
+                        RetryCounter = 0;
+                    }
+                    waitTimer.Dispose();
+                }
+                catch (SocketException)
+                {
+                    Console.WriteLine($"[WARNING] [{Name}] [WaitForServerAlive] Server doesn't response. Try to reconnect: {RetryCounter}");
+                    lock (_retryCounterLock)
+                    {
+                        RetryCounter++;
+                        if (RetryCounter >= RetryMaxCount)
+                        {
+                            Console.WriteLine($"[WARNING] [{Name}] [WaitForServerAlive] Recreate socket");
+                            RetryCounter = 0;
+                            _statusWatcherClient.Dispose();
+                            _statusWatcherClient = new UdpClient(Host.ToString(), QueryPort.Value);
+                        }
+                    }
+                }
             }, null, 500, 5000);
         }
 
+        private object _retryCounterLock = new();
+        private int RetryCounter = 0;
         public static int RetryMaxCount = 5;
         public static int ReceiveAwaitIntervalSeconds = 10;
         public static int GettingChallengeTokenInterval = 30000;
