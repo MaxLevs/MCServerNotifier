@@ -1,7 +1,7 @@
 using System;
 using System.Linq;
 
-namespace MCServerNotifier
+namespace MCServerNotifier.Data
 {
     public class SessionId
     {

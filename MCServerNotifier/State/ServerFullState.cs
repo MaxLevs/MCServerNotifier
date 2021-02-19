@@ -1,6 +1,6 @@
-namespace MCServerNotifier
+namespace MCServerNotifier.State
 {
-    public class ServerFullState
+    public class ServerFullState : ServerState
     {
         public string Motd { get; set; }
         public string GameType { get; set; }

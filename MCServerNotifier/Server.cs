@@ -1,10 +1,9 @@
 using System;
-using System.Linq;
 using System.Net;
 using System.Net.Sockets;
-using System.Text;
 using System.Threading;
-using System.Threading.Tasks;
+using MCServerNotifier.Packages;
+using MCServerNotifier.State;
 
 namespace MCServerNotifier
 {
@@ -18,8 +17,6 @@ namespace MCServerNotifier
         private object _challengeTokenLock = new();
         private byte[] _challengeToken = new byte[4];
         
-        public ServerFullState FullState { get; private set; }
-
         private void SetChallengeToken(byte[] challengeToken)
         {
             Buffer.BlockCopy(challengeToken, 0, _challengeToken, 0, 4);
@@ -27,6 +24,8 @@ namespace MCServerNotifier
         
         private Timer UpdateChallengeTokenTimer { get; set; }
         private Timer UpdateServerStatusTimer { get; set; }
+        
+        public event EventHandler OnFullStatusUpdated;
         
         public Server(string name, string host, int? queryPort = null, int? rConPort = null)
         {
@@ -41,25 +40,31 @@ namespace MCServerNotifier
             }
         }
         
-        public void Watch(Service service)
+        public void Watch(SendResponseService sendResponseService)
         {
             if (QueryPort != null)
             {
                 var port = QueryPort ?? 0;
                 UpdateChallengeTokenTimer = new Timer(async obj =>
                 {
+                    Console.WriteLine("[INFO] [{Name}] Send handshake request");
+                    
                     var handshakeRequest = Request.GetHandshakeRequest();
-                    byte[] response = await service.SendReceiveAsync(handshakeRequest, Host.ToString(), port, 10000);
+                    byte[] response = await sendResponseService.SendReceiveAsync(handshakeRequest, Host.ToString(), port, 10000);
                     
                     var challengeTokenRaw = Response.ParseHandshake(response);
                     lock (_challengeTokenLock)
                     {
-                        Buffer.BlockCopy(challengeTokenRaw, 0, _challengeToken, 0, 4);
+                        SetChallengeToken(challengeTokenRaw);
                     }
+                    
+                    Console.WriteLine("[INFO] [{Name}] ChallengeToken is set up");
                 }, null, 0, 30000);
                 
                 UpdateServerStatusTimer = new Timer(async obj =>
                 {
+                    Console.WriteLine("[INFO] [{Name}] Send full status request");
+                    
                     var challengeToken = new byte[4];
                     lock (_challengeTokenLock)
                     {
@@ -68,11 +73,28 @@ namespace MCServerNotifier
                     
                     var fullStatusRequest = Request.GetFullStatusRequest(challengeToken);
 
-                    byte[] responce = await service.SendReceiveAsync(fullStatusRequest, Host.ToString(), port, 10000);
+                    byte[] responce = await sendResponseService.SendReceiveAsync(fullStatusRequest, Host.ToString(), port, 10000);
 
-                    FullState = Response.ParseFullState(responce);
+                    ServerFullState fullState = Response.ParseFullState(responce);
+                    
+                    Console.WriteLine($"[INFO] [{Name}] Full status is received");
+                    
+                    OnFullStatusUpdated?.Invoke(this, new ServerStateEventArgs(Name, fullState));
+                    
                 }, null, 500, 5000);
             }
+        }
+    }
+
+    public class ServerStateEventArgs : EventArgs
+    {
+        public string ServerName { get; }
+        public ServerState ServerState { get; }
+        
+        public ServerStateEventArgs(string serverName, ServerState serverState)
+        {
+            ServerName = serverName;
+            ServerState = serverState;
         }
     }
 

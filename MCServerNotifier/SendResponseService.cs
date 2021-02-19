@@ -4,18 +4,22 @@ using System.Net;
 using System.Net.Sockets;
 using System.Threading;
 using System.Threading.Tasks;
+using MCServerNotifier.Data;
+using MCServerNotifier.Packages;
 
 namespace MCServerNotifier
 {
-    public class Service
+    public class SendResponseService
     {
-        private UdpClient _client;
+        private readonly UdpClient _client;
         private ConcurrentDictionary<string, TaskCompletionSource<byte[]>> _tcsDictionary;
+        private Task ReceiveTask { get; }
         
-        public Service()
+        public SendResponseService()
         {
             _client = new UdpClient();
-            Task.Run(new Action (() =>
+            _tcsDictionary = new ConcurrentDictionary<string, TaskCompletionSource<byte[]>>();
+            ReceiveTask = Task.Run(new Action (() =>
             {
                 IPEndPoint ipEndPoint = null;
 
@@ -60,6 +64,11 @@ namespace MCServerNotifier
             {
                 _tcsDictionary.TryRemove(sessionId, out tcs);
             }
+        }
+
+        public void Wait()
+        {
+            ReceiveTask.Wait();
         }
     }
     

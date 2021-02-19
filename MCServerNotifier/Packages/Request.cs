@@ -1,6 +1,7 @@
 using System.Collections.Generic;
+using MCServerNotifier.Data;
 
-namespace MCServerNotifier
+namespace MCServerNotifier.Packages
 {
     public class Request
     {
