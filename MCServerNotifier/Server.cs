@@ -14,7 +14,7 @@ namespace MCServerNotifier
         public IPAddress Host { get; }
         public int? QueryPort { get; }
         public int? RConPort { get; }
-
+        
         public bool IsOnline
         {
             get => _isOnline;
@@ -71,8 +71,7 @@ namespace MCServerNotifier
         public async void Watch()
         {
             if (QueryPort == null) return;
-            var ipEndPoint = IPEndPoint.Parse($"{Host}:{QueryPort.Value}");
-            _statusWatcherClient = new UdpClient(ipEndPoint);
+            _statusWatcherClient = new UdpClient(Host.ToString(), QueryPort.Value);
             
             UpdateChallengeTokenTimer = new Timer(async obj =>
             {
@@ -87,7 +86,7 @@ namespace MCServerNotifier
                 }
                 catch (SocketException)
                 {
-                    WaitForServerAlive(ipEndPoint.Port);
+                    WaitForServerAlive(QueryPort.Value);
                 }
                     
                 var challengeTokenRaw = Response.ParseHandshake(response);
@@ -96,7 +95,7 @@ namespace MCServerNotifier
                     SetChallengeToken(challengeTokenRaw);
                 }
                     
-                Console.WriteLine($"[INFO] [{Name}] ChallengeToken is set up");
+                Console.WriteLine($"[INFO] [{Name}] ChallengeToken is set up: " + BitConverter.ToString(challengeTokenRaw));
             }, null, 0, GettingChallengeTokenInterval);
                 
             UpdateServerStatusTimer = new Timer(async obj =>
@@ -120,7 +119,7 @@ namespace MCServerNotifier
                 
                 catch (SocketException)
                 {
-                    WaitForServerAlive(ipEndPoint.Port);
+                    WaitForServerAlive(QueryPort.Value);
                 }
 
                 ServerFullState fullState = Response.ParseFullState(response);

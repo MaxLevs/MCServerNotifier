@@ -1,4 +1,6 @@
 ﻿using System;
+using System.Net;
+using System.Net.Sockets;
 using MCServerNotifier.State;
 
 namespace MCServerNotifier
@@ -7,6 +9,7 @@ namespace MCServerNotifier
     {
         static void Main(string[] args)
         {
+            
             var server = new Server("ML_VDS", "140.82.11.11", 25565);
 
             server.OnServerOnline += (sender, eventArgs) =>
