@@ -1,7 +1,4 @@
 ﻿using System;
-using System.Net;
-using System.Net.Sockets;
-using MCQueryLib;
 using MCQueryLib.State;
 
 namespace MCServerNotifier
@@ -11,38 +8,39 @@ namespace MCServerNotifier
         static void Main(string[] args)
         {
             
-            var server = new Server("ML_VDS", "140.82.11.11", 25565);
+            var statusWatcher = new StatusWatcher("ML_VDS", "140.82.11.11", 25565);
 
-            server.OnServerOnline += (sender, eventArgs) =>
+            statusWatcher.OnServerOnline += (sender, eventArgs) =>
             {
                 if (sender == null)
                     return;
 
-                var serverEntity = (Server) sender;
-                Console.WriteLine($"[{serverEntity.Name}] Server is online");
+                var statusWatcher = (StatusWatcher) sender;
+                Console.WriteLine($"[{statusWatcher.ServerName}] Server is online");
             };
             
-            server.OnServerOffline += (sender, eventArgs) =>
+            statusWatcher.OnServerOffline += (sender, eventArgs) =>
             {
                 if (sender == null)
                     return;
 
-                var serverEntity = (Server) sender;
-                Console.WriteLine($"[{serverEntity.Name}] Server is offline");
+                var statusWatcher = (StatusWatcher) sender;
+                Console.WriteLine($"[{statusWatcher.ServerName}] Server is offline");
             };
             
-            server.OnFullStatusUpdated += (sender, eventArgs) =>
+            statusWatcher.OnFullStatusUpdated += (sender, eventArgs) =>
             {
                 var serverStateEventArgs = (ServerStateEventArgs) eventArgs;
                 var serverFullState = (ServerFullState) serverStateEventArgs.ServerState;
                 Console.WriteLine($"[{serverStateEventArgs.ServerName}] State has updated: ({serverFullState.PlayerCount} out of {serverFullState.MaxPlayers}) [{string.Join(", ", serverFullState.PlayerList)}]");
             };
             
-            server.Watch();
+            statusWatcher.Watch();
 
             while (true)
             {
-                // ignore
+                Console.Write("> ");
+                Console.ReadLine();
             }
         }
     }

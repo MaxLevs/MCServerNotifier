@@ -3,27 +3,29 @@ using System.Net;
 using System.Net.Sockets;
 using System.Threading;
 using System.Threading.Tasks;
+using MCQueryLib;
 using MCQueryLib.Packages;
 using MCQueryLib.State;
 using UdpExtension;
 
 namespace MCServerNotifier
 {
-    public class Server
+    public class StatusWatcher
     {
-        public string Name { get; set; }
-        public IPAddress Host { get; }
-        public int? QueryPort { get; }
-        public int? RConPort { get; }
+        public string ServerName { get; set; }
+
+        private readonly McQuery _mcQuery;
+        public IPAddress Host => _mcQuery.Host;
+        public int Port => _mcQuery.Port;
         
         public bool IsOnline
         {
-            get => _isOnline;
+            get => _mcQuery.IsOnline;
             private set
             {
-                if (_isOnline == value) return;
+                if (_mcQuery.IsOnline == value) return;
                 
-                _isOnline = value;
+                _mcQuery.IsOnline= value;
                     
                 switch (value)
                 {
@@ -37,18 +39,7 @@ namespace MCServerNotifier
                 }
             }
         }
-        private bool _isOnline = true;
 
-        private object _challengeTokenLock = new();
-        private byte[] _challengeToken = new byte[4];
-
-        private UdpClient _statusWatcherClient;
-        
-        private void SetChallengeToken(byte[] challengeToken)
-        {
-            Buffer.BlockCopy(challengeToken, 0, _challengeToken, 0, 4);
-        }
-        
         private Timer UpdateChallengeTokenTimer { get; set; }
         private Timer UpdateServerStatusTimer { get; set; }
         
@@ -56,43 +47,38 @@ namespace MCServerNotifier
         public event EventHandler OnServerOffline;
         public event EventHandler OnServerOnline;
         
-        public Server(string name, string host, int? queryPort = null, int? rConPort = null)
+        public StatusWatcher(string serverName, string host, int queryPort)
         {
-            Name = name;
-            Host = Dns.GetHostAddresses(host)[0];
-            QueryPort = queryPort;
-            RConPort = rConPort;
-
-            if (QueryPort == null && RConPort == null)
-            {
-                throw new IncorrectServerEntryPoint(Host);
-            }
+            ServerName = serverName;
+            _mcQuery = new McQuery(Dns.GetHostAddresses(host)[0], queryPort);
+            _mcQuery.InitSocket();
         }
         
         public async void Watch()
         {
-            if (QueryPort == null) return;
-            _statusWatcherClient = new UdpClient(Host.ToString(), QueryPort.Value);
-            
             UpdateChallengeTokenTimer = new Timer(async obj =>
             {
                 if (!IsOnline) return;
-                Console.WriteLine($"[INFO] [{Name}] Send handshake request");
+                Console.WriteLine($"[INFO] [{ServerName}] Send handshake request");
                     
-                Request handshakeRequest = Request.GetHandshakeRequest();
-                byte[] response = null;
+                byte[] challengeToken = null;
+                
                 try
                 {
-                    response = await SendResponseService.SendReceive(_statusWatcherClient, handshakeRequest.Data, ReceiveAwaitIntervalSeconds);
+                    challengeToken = await _mcQuery.GetHandshake();
+                    
                     IsOnline = true;
                     lock (_retryCounterLock)
                     {
                         RetryCounter = 0;
                     }
+                    
+                    Console.WriteLine($"[INFO] [{ServerName}] ChallengeToken is set up: " + BitConverter.ToString(challengeToken));
                 }
+                
                 catch (SocketException)
                 {
-                    Console.WriteLine($"[WARNING] [{Name}] [UpdateChallengeTokenTimer] Server doesn't response. Try to reconnect: {RetryCounter}");
+                    Console.WriteLine($"[WARNING] [{ServerName}] [UpdateChallengeTokenTimer] Server doesn't response. Try to reconnect: {RetryCounter}");
                     lock (_retryCounterLock)
                     {
                         RetryCounter++;
@@ -103,46 +89,34 @@ namespace MCServerNotifier
                         }
                     }
                 }
-                    
-                if (response == null) return;
                 
-                var challengeTokenRaw = Response.ParseHandshake(response);
-                lock (_challengeTokenLock)
-                {
-                    SetChallengeToken(challengeTokenRaw);
-                }
-                    
-                Console.WriteLine($"[INFO] [{Name}] ChallengeToken is set up: " + BitConverter.ToString(challengeTokenRaw));
             }, null, 0, GettingChallengeTokenInterval);
                 
             UpdateServerStatusTimer = new Timer(async obj =>
             {
                 if (!IsOnline) return;
                 
-                Console.WriteLine($"[INFO] [{Name}] Send full status request");
-                    
-                var challengeToken = new byte[4];
-                lock (_challengeTokenLock)
-                {
-                    Buffer.BlockCopy(_challengeToken, 0, challengeToken, 0, 4);
-                }
-                    
-                var fullStatusRequest = Request.GetFullStatusRequest(challengeToken);
+                Console.WriteLine($"[INFO] [{ServerName}] Send full status request");
 
-                byte[] response = null;
+                ServerFullState response = null;
+                
                 try
                 {
-                    response = await SendResponseService.SendReceive(_statusWatcherClient, fullStatusRequest.Data, ReceiveAwaitIntervalSeconds);
+                    response = await _mcQuery.GetFullStatus();
+                    
                     IsOnline = true;
                     lock (_retryCounterLock)
                     {
                         RetryCounter = 0;
                     }
+                    
+                    Console.WriteLine($"[INFO] [{ServerName}] Full status is received");
+                    OnFullStatusUpdated?.Invoke(this, new ServerStateEventArgs(ServerName, response));
                 }
                 
                 catch (SocketException)
                 {
-                    Console.WriteLine($"[WARNING] [{Name}] [UpdateServerStatusTimer] Server doesn't response. Try to reconnect: {RetryCounter}");
+                    Console.WriteLine($"[WARNING] [{ServerName}] [UpdateServerStatusTimer] Server doesn't response. Try to reconnect: {RetryCounter}");
                     lock (_retryCounterLock)
                     {
                         RetryCounter++;
@@ -154,14 +128,6 @@ namespace MCServerNotifier
                     }
                 }
                 
-                if (response == null) return;
-
-                ServerFullState fullState = Response.ParseFullState(response);
-                    
-                Console.WriteLine($"[INFO] [{Name}] Full status is received");
-                    
-                OnFullStatusUpdated?.Invoke(this, new ServerStateEventArgs(Name, fullState));
-                    
             }, null, 500, GettingStatusInterval);
         }
 
@@ -169,43 +135,44 @@ namespace MCServerNotifier
         {
             await UpdateChallengeTokenTimer.DisposeAsync();
             await UpdateServerStatusTimer.DisposeAsync();
-            _statusWatcherClient?.Dispose();
-            _statusWatcherClient = null;
         }
 
         public async void WaitForServerAlive()
         {
-            Console.WriteLine($"[WARNING] [{Name}] Server is unavailable. Waiting for reconnection...");
+            Console.WriteLine($"[WARNING] [{ServerName}] Server is unavailable. Waiting for reconnection...");
+            
             IsOnline = false;
             await Unwatch();
-            _statusWatcherClient = new UdpClient(Host.ToString(), QueryPort.Value);
+            
+            _mcQuery.InitSocket();
+            
             Timer waitTimer = null;
             waitTimer = new Timer(async obj => {
-                Request handshakeRequest = Request.GetHandshakeRequest();
                 byte[] response = null;
                 try
                 {
-                    response = await SendResponseService.SendReceive(_statusWatcherClient, handshakeRequest.Data, ReceiveAwaitIntervalSeconds);
+                    await _mcQuery.GetHandshake();
+                    
                     IsOnline = true;
                     Watch();
                     lock (_retryCounterLock)
                     {
                         RetryCounter = 0;
                     }
+                    
                     waitTimer.Dispose();
                 }
                 catch (SocketException)
                 {
-                    Console.WriteLine($"[WARNING] [{Name}] [WaitForServerAlive] Server doesn't response. Try to reconnect: {RetryCounter}");
+                    Console.WriteLine($"[WARNING] [{ServerName}] [WaitForServerAlive] Server doesn't response. Try to reconnect: {RetryCounter}");
                     lock (_retryCounterLock)
                     {
                         RetryCounter++;
                         if (RetryCounter >= RetryMaxCount)
                         {
-                            Console.WriteLine($"[WARNING] [{Name}] [WaitForServerAlive] Recreate socket");
+                            Console.WriteLine($"[WARNING] [{ServerName}] [WaitForServerAlive] Recreate socket");
                             RetryCounter = 0;
-                            _statusWatcherClient.Dispose();
-                            _statusWatcherClient = new UdpClient(Host.ToString(), QueryPort.Value);
+                            _mcQuery.InitSocket();
                         }
                     }
                 }
@@ -215,8 +182,37 @@ namespace MCServerNotifier
         private object _retryCounterLock = new();
         private int RetryCounter = 0;
         public static int RetryMaxCount = 5;
-        public static int ReceiveAwaitIntervalSeconds = 10;
+
+        public int ResponseWaitIntervalSecond
+        {
+            get => _mcQuery.ResponseWaitIntervalSecond;
+            set => _mcQuery.ResponseWaitIntervalSecond = value;
+        }
         public static int GettingChallengeTokenInterval = 30000;
         public static int GettingStatusInterval = 5000;
+    }
+
+    public class ServerStateEventArgs : EventArgs
+    {
+        public string ServerName { get; }
+        public ServerState ServerState { get; }
+        
+        public ServerStateEventArgs(string serverName, ServerState serverState)
+        {
+            ServerName = serverName;
+            ServerState = serverState;
+        }
+    }
+
+    public class IncorrectServerEntryPoint : SocketException
+    {
+        public IPAddress Host { get; }
+        public override string Message { get; }
+        
+        public IncorrectServerEntryPoint(IPAddress host)
+        {
+            Host = host;
+            Message = "Incorrect entry point for host " + Host + ". RConPort and QueryPort are both null.";
+        }
     }
 }
