@@ -72,7 +72,7 @@ namespace MCServerNotifier
                             foreach (var playerName in serverFullState.PlayerList)
                             {
                                 if (storedPlayerList.Contains(playerName)) continue;
-                                notifierOptions.Message = $"[{playerName}] has JOINED the game";
+                                notifierOptions.Message = $"\\[{playerName}] has JOINED the game";
                                 notifierOptions.Sound = NotificationSound.Submarine;
                                 TerminalNotifierWrapper.Notify(notifierOptions);
                             }
@@ -80,7 +80,7 @@ namespace MCServerNotifier
                             foreach (var playerName in storedPlayerList)
                             {
                                 if (serverFullState.PlayerList.Contains(playerName)) continue;
-                                notifierOptions.Message = $"[{playerName}] has LEFT the game";
+                                notifierOptions.Message = $"\\[{playerName}] has LEFT the game";
                                 notifierOptions.Sound = NotificationSound.Submarine;
                                 TerminalNotifierWrapper.Notify(notifierOptions);
                             }

@@ -3,6 +3,11 @@ using System.Diagnostics;
 
 namespace TerminalNotifierLib
 {
+    /// <summary>
+    /// This class is wrapper under terminal-notification commandline app.
+    /// Warning: if your notification doesn't appear, try to check symbols of message.
+    /// Symbols such as "[" must be escaped sometimes
+    /// </summary>
     public static class TerminalNotifierWrapper
     {
         private static readonly string Name = "terminal-notifier";
