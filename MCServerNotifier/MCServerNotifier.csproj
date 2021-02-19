@@ -11,6 +11,7 @@
     </ItemGroup>
     <ItemGroup>
         <None Update="Resources/notification_icon.png" CopyToOutputDirectory="PreserveNewest" />
+        <None Update="Resources/servers.json" CopyToOutputDirectory="PreserveNewest" />
     </ItemGroup>
 
 </Project>

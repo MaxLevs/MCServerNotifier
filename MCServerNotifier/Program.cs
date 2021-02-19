@@ -1,5 +1,7 @@
 ﻿using System;
+using System.IO;
 using System.Linq;
+using System.Text.Json;
 using MCQueryLib.State;
 using TerminalNotifierLib;
 
@@ -9,95 +11,99 @@ namespace MCServerNotifier
     {
         static void Main(string[] args)
         {
-            Server server = new Server
+            using var serversConfig = File.OpenText("Resources/servers.json");
+            var servers = JsonSerializer.Deserialize<Server[]>(serversConfig.ReadToEnd());
+            
+            if (servers == null) return;
+
+            foreach (var server in servers)
             {
-                Name = "ML_VDS",
-                Host = "140.82.11.11",
-                QueryPort = 25565
-            };
 
-            if (server.QueryPort.HasValue)
-            {
-                var statusWatcher = new StatusWatcher(server.Name, server.Host, server.QueryPort.Value);
-                var notifierOptionsLocker = new object();
-                var notifierOptions = new TerminalNotifierOptions
+                if (server.QueryPort.HasValue)
                 {
-                    Title = $"[{server.Name}] MC Server notification",
-                    ContentImage = "Resources/notification_icon.png",
-                };
-
-                statusWatcher.OnServerOnline += (sender, eventArgs) =>
-                {
-                    if (sender == null)
-                        return;
-
-                    var watcher = (StatusWatcher) sender;
-
-                    lock (notifierOptionsLocker)
+                    var statusWatcher = new StatusWatcher(server.Name, server.Host, server.QueryPort.Value);
+                    var notifierOptionsLocker = new object();
+                    var notifierOptions = new TerminalNotifierOptions
                     {
-                        notifierOptions.Message = "Server is [ONLINE]";
-                        notifierOptions.Sound = NotificationSound.Ping;
-                        TerminalNotifierWrapper.Notify(notifierOptions);
-                    }
-                    Console.WriteLine($"[{DateTime.Now}] [{watcher.ServerName}] Server is online");
-                };
-                
-                statusWatcher.OnServerOffline += (sender, eventArgs) =>
-                {
-                    if (sender == null)
-                        return;
+                        Title = $"[{server.Name}] MC Server notification",
+                        ContentImage = "Resources/notification_icon.png",
+                    };
 
-                    var watcher = (StatusWatcher) sender;
-                    
-                    lock (notifierOptionsLocker)
+                    statusWatcher.OnServerOnline += (sender, eventArgs) =>
                     {
-                        notifierOptions.Message = "Server is [OFFLINE]";
-                        notifierOptions.Sound = NotificationSound.Basso;
-                        TerminalNotifierWrapper.Notify(notifierOptions);
-                    }
-                    Console.WriteLine($"[{DateTime.Now}] [{watcher.ServerName}] Server is offline");
-                };
+                        if (sender == null)
+                            return;
 
-                string[] storedPlayerList = null;
-                statusWatcher.OnFullStatusUpdated += (sender, eventArgs) =>
-                {
-                    var serverStateEventArgs = (ServerStateEventArgs) eventArgs;
-                    var serverFullState = (ServerFullState) serverStateEventArgs.ServerState;
-                    Console.WriteLine($"[{DateTime.Now}] [{serverStateEventArgs.ServerName}] State has updated: ({serverFullState.PlayerCount} out of {serverFullState.MaxPlayers}) [{string.Join(", ", serverFullState.PlayerList)}]");
+                        var watcher = (StatusWatcher) sender;
 
-                    if (storedPlayerList != null)
-                    {
                         lock (notifierOptionsLocker)
                         {
-                            foreach (var playerName in serverFullState.PlayerList)
-                            {
-                                if (storedPlayerList.Contains(playerName)) continue;
-                                notifierOptions.Message = $"\\[{playerName}] has JOINED the game";
-                                notifierOptions.Sound = NotificationSound.Submarine;
-                                TerminalNotifierWrapper.Notify(notifierOptions);
-                            }
+                            notifierOptions.Message = "Server is [ONLINE]";
+                            notifierOptions.Sound = NotificationSound.Ping;
+                            TerminalNotifierWrapper.Notify(notifierOptions);
+                        }
 
-                            foreach (var playerName in storedPlayerList)
+                        Console.WriteLine($"[{DateTime.Now}] [{watcher.ServerName}] Server is online");
+                    };
+
+                    statusWatcher.OnServerOffline += (sender, eventArgs) =>
+                    {
+                        if (sender == null)
+                            return;
+
+                        var watcher = (StatusWatcher) sender;
+
+                        lock (notifierOptionsLocker)
+                        {
+                            notifierOptions.Message = "Server is [OFFLINE]";
+                            notifierOptions.Sound = NotificationSound.Basso;
+                            TerminalNotifierWrapper.Notify(notifierOptions);
+                        }
+
+                        Console.WriteLine($"[{DateTime.Now}] [{watcher.ServerName}] Server is offline");
+                    };
+
+                    string[] storedPlayerList = null;
+                    statusWatcher.OnFullStatusUpdated += (sender, eventArgs) =>
+                    {
+                        var serverStateEventArgs = (ServerStateEventArgs) eventArgs;
+                        var serverFullState = (ServerFullState) serverStateEventArgs.ServerState;
+                        Console.WriteLine(
+                            $"[{DateTime.Now}] [{serverStateEventArgs.ServerName}] State has updated: ({serverFullState.PlayerCount} out of {serverFullState.MaxPlayers}) [{string.Join(", ", serverFullState.PlayerList)}]");
+
+                        if (storedPlayerList != null)
+                        {
+                            lock (notifierOptionsLocker)
                             {
-                                if (serverFullState.PlayerList.Contains(playerName)) continue;
-                                notifierOptions.Message = $"\\[{playerName}] has LEFT the game";
-                                notifierOptions.Sound = NotificationSound.Submarine;
-                                TerminalNotifierWrapper.Notify(notifierOptions);
+                                foreach (var playerName in serverFullState.PlayerList)
+                                {
+                                    if (storedPlayerList.Contains(playerName)) continue;
+                                    notifierOptions.Message = $"\\[{playerName}] has JOINED the game";
+                                    notifierOptions.Sound = NotificationSound.Submarine;
+                                    TerminalNotifierWrapper.Notify(notifierOptions);
+                                }
+
+                                foreach (var playerName in storedPlayerList)
+                                {
+                                    if (serverFullState.PlayerList.Contains(playerName)) continue;
+                                    notifierOptions.Message = $"\\[{playerName}] has LEFT the game";
+                                    notifierOptions.Sound = NotificationSound.Submarine;
+                                    TerminalNotifierWrapper.Notify(notifierOptions);
+                                }
                             }
                         }
-                    }
 
-                    storedPlayerList = serverFullState.PlayerList;
-                };
-                
-                statusWatcher.Watch();
-            }
+                        storedPlayerList = serverFullState.PlayerList;
+                    };
 
-            if (server.RConPort.HasValue)
-            {
-                // create rcon module
+                    statusWatcher.Watch();
+                }
+
+                if (server.RConPort.HasValue)
+                {
+                    // create rcon module
+                }
             }
-            
 
             while (true)
             {
