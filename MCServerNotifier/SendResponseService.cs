@@ -12,7 +12,7 @@ namespace MCServerNotifier
     public class SendResponseService
     {
         private readonly UdpClient _client;
-        private ConcurrentDictionary<string, TaskCompletionSource<byte[]>> _tcsDictionary;
+        private readonly ConcurrentDictionary<string, TaskCompletionSource<byte[]>> _tcsDictionary;
         private Task ReceiveTask { get; }
         
         public SendResponseService()
@@ -28,16 +28,12 @@ namespace MCServerNotifier
                     try
                     {
                         var receivedBytes = _client.Receive(ref ipEndPoint);
-                        
-                        var sessionIdBytes = new byte[4];
-                        Buffer.BlockCopy(receivedBytes, 1, sessionIdBytes, 0, 4);
-                        var sessionId = new SessionId(sessionIdBytes);
-
+                        var sessionId = Response.ParseSessionId(receivedBytes);
                         if (_tcsDictionary.TryGetValue(sessionId.GetString(), out TaskCompletionSource<byte[]> tcs)) tcs.SetResult(receivedBytes);
                     }
                     catch (SocketException)
                     {
-                        ;//при невозможности соединения продолжаем работать
+                        //при невозможности соединения продолжаем работать
                     }
                 }
             }));        

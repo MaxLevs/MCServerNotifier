@@ -47,7 +47,7 @@ namespace MCServerNotifier
                 var port = QueryPort ?? 0;
                 UpdateChallengeTokenTimer = new Timer(async obj =>
                 {
-                    Console.WriteLine("[INFO] [{Name}] Send handshake request");
+                    Console.WriteLine($"[INFO] [{Name}] Send handshake request");
                     
                     var handshakeRequest = Request.GetHandshakeRequest();
                     byte[] response = await sendResponseService.SendReceiveAsync(handshakeRequest, Host.ToString(), port, 10000);
@@ -58,12 +58,12 @@ namespace MCServerNotifier
                         SetChallengeToken(challengeTokenRaw);
                     }
                     
-                    Console.WriteLine("[INFO] [{Name}] ChallengeToken is set up");
+                    Console.WriteLine($"[INFO] [{Name}] ChallengeToken is set up");
                 }, null, 0, 30000);
                 
                 UpdateServerStatusTimer = new Timer(async obj =>
                 {
-                    Console.WriteLine("[INFO] [{Name}] Send full status request");
+                    Console.WriteLine($"[INFO] [{Name}] Send full status request");
                     
                     var challengeToken = new byte[4];
                     lock (_challengeTokenLock)
@@ -73,9 +73,9 @@ namespace MCServerNotifier
                     
                     var fullStatusRequest = Request.GetFullStatusRequest(challengeToken);
 
-                    byte[] responce = await sendResponseService.SendReceiveAsync(fullStatusRequest, Host.ToString(), port, 10000);
+                    byte[] response = await sendResponseService.SendReceiveAsync(fullStatusRequest, Host.ToString(), port, 10000);
 
-                    ServerFullState fullState = Response.ParseFullState(responce);
+                    ServerFullState fullState = Response.ParseFullState(response);
                     
                     Console.WriteLine($"[INFO] [{Name}] Full status is received");
                     

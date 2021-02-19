@@ -3,11 +3,15 @@ using MCServerNotifier.Data;
 
 namespace MCServerNotifier.Packages
 {
+    /// <summary>
+    /// This class builds Minecraft Query Packages for requests
+    /// Wiki: https://wiki.vg/Query
+    /// </summary>
     public class Request
     {
-        private readonly byte[] _magic = { 0xfe, 0xfd };
-        private readonly byte[] _challenge = { 0x09 };
-        private readonly byte[] _status = { 0x00 };
+        private static readonly byte[] Magic = { 0xfe, 0xfd };
+        private static readonly byte[] Challenge = { 0x09 };
+        private static readonly byte[] Status = { 0x00 };
         public readonly SessionId SessionId = SessionId.GenerateRandomId();
         public byte[] Data { get; private set; }
         
@@ -18,8 +22,8 @@ namespace MCServerNotifier.Packages
             var request = new Request();
             
             var data = new List<byte>();
-            data.AddRange(request._magic);
-            data.AddRange(request._challenge);
+            data.AddRange(Magic);
+            data.AddRange(Challenge);
             data.AddRange(request.SessionId.GetBytes());
             
             request.Data = data.ToArray();
@@ -31,8 +35,8 @@ namespace MCServerNotifier.Packages
             var request = new Request();
             
             var data = new List<byte>();
-            data.AddRange(request._magic);
-            data.AddRange(request._status);
+            data.AddRange(Magic);
+            data.AddRange(Status);
             data.AddRange(request.SessionId.GetBytes());
             data.AddRange(challengeToken);
             
@@ -45,8 +49,8 @@ namespace MCServerNotifier.Packages
             var request = new Request();
             
             var data = new List<byte>();
-            data.AddRange(request._magic);
-            data.AddRange(request._status);
+            data.AddRange(Magic);
+            data.AddRange(Status);
             data.AddRange(request.SessionId.GetBytes());
             data.AddRange(challengeToken);
             data.AddRange(new byte[] {0x00, 0x00, 0x00, 0x00}); // Padding
