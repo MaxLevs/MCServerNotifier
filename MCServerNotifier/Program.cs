@@ -8,6 +8,24 @@ namespace MCServerNotifier
         static void Main(string[] args)
         {
             var server = new Server("ML_VDS", "140.82.11.11", 25565);
+
+            server.OnServerOnline += (sender, eventArgs) =>
+            {
+                if (sender == null)
+                    return;
+
+                var serverEntity = (Server) sender;
+                Console.WriteLine($"[{serverEntity.Name}] Server is online");
+            };
+            
+            server.OnServerOffline += (sender, eventArgs) =>
+            {
+                if (sender == null)
+                    return;
+
+                var serverEntity = (Server) sender;
+                Console.WriteLine($"[{serverEntity.Name}] Server is offline");
+            };
             
             server.OnFullStatusUpdated += (sender, eventArgs) =>
             {

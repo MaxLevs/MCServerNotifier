@@ -15,6 +15,29 @@ namespace MCServerNotifier
         public int? QueryPort { get; }
         public int? RConPort { get; }
 
+        public bool IsOnline
+        {
+            get => _isOnline;
+            private set
+            {
+                if (_isOnline == value) return;
+                
+                _isOnline = value;
+                    
+                switch (value)
+                {
+                    case true:
+                        OnServerOnline?.Invoke(this, EventArgs.Empty);
+                        break;
+                        
+                    case false:
+                        OnServerOffline?.Invoke(this, EventArgs.Empty);
+                        break;
+                }
+            }
+        }
+        private bool _isOnline = false;
+
         private object _challengeTokenLock = new();
         private byte[] _challengeToken = new byte[4];
 
@@ -29,6 +52,8 @@ namespace MCServerNotifier
         private Timer UpdateServerStatusTimer { get; set; }
         
         public event EventHandler OnFullStatusUpdated;
+        public event EventHandler OnServerOffline;
+        public event EventHandler OnServerOnline;
         
         public Server(string name, string host, int? queryPort = null, int? rConPort = null)
         {
@@ -58,6 +83,7 @@ namespace MCServerNotifier
                 try
                 {
                     response = await SendResponseService.SendReceive(_statusWatcherClient, handshakeRequest.Data, ReceiveAwaitIntervalSeconds);
+                    IsOnline = true;
                 }
                 catch (SocketException)
                 {
@@ -89,6 +115,7 @@ namespace MCServerNotifier
                 try
                 {
                     response = await SendResponseService.SendReceive(_statusWatcherClient, fullStatusRequest.Data, ReceiveAwaitIntervalSeconds);
+                    IsOnline = true;
                 }
                 
                 catch (SocketException)
@@ -115,18 +142,18 @@ namespace MCServerNotifier
 
         public async void WaitForServerAlive(int port)
         {
+            IsOnline = false;
             await Unwatch();
             var ipEndPoint = IPEndPoint.Parse($"{Host}:{port}");
             Timer waitTimer = null;
             waitTimer = new Timer(async obj => {
-                try {
-                    using (TcpClient tcpClient = new TcpClient()) 
-                    {
-                        tcpClient.Connect(ipEndPoint);
-                        if (waitTimer == null) return;
-                        await waitTimer.DisposeAsync();
-                        Watch();
-                    } 
+                try
+                {
+                    using TcpClient tcpClient = new TcpClient();
+                    tcpClient.Connect(ipEndPoint);
+                    if (waitTimer == null) return;
+                    await waitTimer.DisposeAsync();
+                    Watch();
                 }  catch (SocketException) { }
             }, null, 500, 5000);
         }
