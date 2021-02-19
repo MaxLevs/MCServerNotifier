@@ -91,7 +91,7 @@ namespace MCServerNotifier
                 
                 catch (Exception ex)
                 {
-                    if (ex is SocketException || ex is McQueryServerIsOffline || ex is ChallengeTokenIsNullException)
+                    if (ex is SocketException || ex is McQueryException || ex is ChallengeTokenIsNullException)
                     {
                         if(Debug)
                             Console.WriteLine($"[WARNING] [{ServerName}] [UpdateChallengeTokenTimer] Server doesn't response. Try to reconnect: {RetryCounter}");
@@ -140,7 +140,7 @@ namespace MCServerNotifier
                 
                 catch (Exception ex)
                 {
-                    if (ex is SocketException || ex is McQueryServerIsOffline || ex is ChallengeTokenIsNullException)
+                    if (ex is SocketException || ex is McQueryException || ex is ChallengeTokenIsNullException)
                     {
                         if(Debug)
                             Console.WriteLine($"[WARNING] [{ServerName}] [UpdateServerStatusTimer] Server doesn't response. Try to reconnect: {RetryCounter}");
