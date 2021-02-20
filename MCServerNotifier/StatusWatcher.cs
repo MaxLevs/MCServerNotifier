@@ -6,7 +6,6 @@ using System.Threading.Tasks;
 using MCQueryLib;
 using MCQueryLib.Packages;
 using MCQueryLib.State;
-using UdpExtension;
 
 namespace MCServerNotifier
 {
@@ -95,6 +94,8 @@ namespace MCServerNotifier
                     {
                         if(Debug)
                             Console.WriteLine($"[WARNING] [{ServerName}] [UpdateChallengeTokenTimer] Server doesn't response. Try to reconnect: {RetryCounter}");
+                        if(ex is McQueryException)
+                            Console.Error.WriteLine(ex);
                         
                         lock (_retryCounterLock)
                         {
@@ -144,6 +145,8 @@ namespace MCServerNotifier
                     {
                         if(Debug)
                             Console.WriteLine($"[WARNING] [{ServerName}] [UpdateServerStatusTimer] Server doesn't response. Try to reconnect: {RetryCounter}");
+                        if(ex is McQueryException)
+                            Console.Error.WriteLine(ex);
                         
                         lock (_retryCounterLock)
                         {
