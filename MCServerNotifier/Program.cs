@@ -25,7 +25,7 @@ namespace MCServerNotifier
                     var notifierOptionsLocker = new object();
                     var notifierOptions = new TerminalNotifierOptions
                     {
-                        Title = $"[{server.Name}] MC Server notification",
+                        Title = $"\\[{server.Name}] MC Server notification",
                         ContentImage = "Resources/notification_icon.png",
                     };
 
