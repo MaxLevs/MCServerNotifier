@@ -6,5 +6,6 @@ namespace MCServerNotifier
         public string Host { get; set; }
         public int? QueryPort { get; set; }
         public int? RConPort { get; set; }
+        public string RConPassword { get; set; }
     }
 }
