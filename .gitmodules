@@ -1,0 +1,3 @@
+[submodule "MCQueryLib"]
+	path = MCQueryLib
+	url = git@github.com:MaxLevs/McQueryLib.Net.git
