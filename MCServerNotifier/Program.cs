@@ -16,12 +16,12 @@ namespace MCServerNotifier
             
             if (servers == null) return;
 
+            var rnd = new Random();
             foreach (var server in servers)
             {
-
                 if (server.QueryPort.HasValue)
                 {
-                    var statusWatcher = new StatusWatcher(server.Name, server.Host, server.QueryPort.Value);
+                    var statusWatcher = new StatusWatcher(server.Name, server.Host, server.QueryPort.Value, rnd) {Debug = true};
                     var notifierOptionsLocker = new object();
                     var notifierOptions = new TerminalNotifierOptions
                     {
