@@ -42,10 +42,10 @@ namespace MCServerNotifier
         private Timer UpdateChallengeTokenTimer { get; set; }
         private Timer UpdateServerStatusTimer { get; set; }
         
-        public StatusWatcher(string serverName, string host, int queryPort)
+        public StatusWatcher(string serverName, string host, int queryPort, Random rnd)
         {
             ServerName = serverName;
-            _mcQuery = new McQuery(Dns.GetHostAddresses(host)[0], queryPort);
+            _mcQuery = new McQuery(Dns.GetHostAddresses(host)[0], queryPort, rnd);
             _mcQuery.InitSocket();
         }
 
@@ -69,7 +69,7 @@ namespace MCServerNotifier
         {
             UpdateChallengeTokenTimer = new Timer(async obj =>
             {
-                if (!IsOnline) return;
+                // if (!IsOnline) return;
                 
                 if(Debug)
                     Console.WriteLine($"[INFO] [{ServerName}] Send handshake request");
