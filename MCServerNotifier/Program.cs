@@ -108,6 +108,7 @@ namespace MCServerNotifier
             while (true)
             {
                 // Just chill and flex here...
+                Console.ReadLine();
             }
         }
     }
